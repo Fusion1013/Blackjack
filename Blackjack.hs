@@ -73,7 +73,7 @@ gameOver hand | value hand > 21 = True
 
 -- Returns the winner given the two hands
 winner :: Hand -> Hand -> Player
-winner guestHand bankHand | value guestHand <= value bankHand = Bank
+winner guestHand hand | value guestHand <= value hand = Bank
                           | value guestHand > 21 = Bank
                           | otherwise = Guest
 
@@ -106,51 +106,58 @@ draw (x:xs) hand = (xs, x : hand) -- ELEMENT : [SAKER] = [ELEMENT, SAKER]
 
 -- Plays the bank
 playBank :: Deck -> Hand
-playBank deck = pullBankCards (deck, [])
+playBank deck = bankCards (deck, [])
 
 -- Pulls card for the bank until the value of the bank's hand >= 16
-pullBankCards :: (Deck, Hand) -> Hand
-pullBankCards (deck, bankHand) | value bankHand < 16 = pullBankCards (deck', bankHand')
-                               | otherwise = bankHand
-  where (deck', bankHand') = draw deck bankHand
+bankCards :: (Deck, Hand) -> Hand
+bankCards (deck, hand) | value hand < 16 = bankCards (deck', hand')
+                       | otherwise = hand
+  where (deck', hand') = draw deck hand
 
 --- TASK B4 ---
 -- Shuffles the input deck using the random list given
 shuffle :: [Double] -> Deck -> Deck
 shuffle r deck = shuffle' r deck []
 
+-- Shuffle helper function
 shuffle' :: [Double] -> Deck -> Deck -> Deck
 shuffle' _      []   newDeck = newDeck
-shuffle' (x:xs) deck newDeck = shuffle' 
-         xs (removeElement (pos x deck) deck) ((getElement (pos x deck) deck) : newDeck)
-pos :: Double -> Deck -> Int
-pos x list = round (x * (fromIntegral(length list) - 1))
+shuffle' (x:xs) deck newDeck = 
+    shuffle' xs 
+             (removeEle (pos x deck) deck)
+             ((getEle (pos x deck) deck) : newDeck)
+  where
+    pos x list = round (x * (fromIntegral(length list) - 1))
 
 -- Returns the element at position n in a deck
-getElement :: Int -> Deck -> Card
-getElement n [] = error "List is empty"
-getElement n list = list !! n
+getEle :: Int -> Deck -> Card
+getEle n [] = error "getEle: List is empty"
+getEle n list = list !! n
 
 -- Removes an element from a deck at the give index
-removeElement :: Int -> Deck -> Deck
-removeElement _ [] = []
-removeElement n (x:xs) | n == 0 = xs
-                       | otherwise = x : removeElement (n-1) xs
+removeEle :: Int -> Deck -> Deck
+removeEle _ [] = []
+removeEle n (x:xs) | n == 0 = xs
+                   | otherwise = x : removeEle (n-1) xs
 
 --- TASK B5 ---
+-- Checks if the element c is present in the list
 belongsTo :: Card -> Deck -> Bool
 c `belongsTo` []      = False
 c `belongsTo` (c':cs) = c == c' || c `belongsTo` cs
 
+-- Tests if the shuffle function contains the given card before and after the shuffle
 prop_shuffle :: Card -> Deck -> Rand -> Bool
 prop_shuffle card deck (Rand randomlist) =
     card `belongsTo` deck == card `belongsTo` shuffle randomlist deck
 
+-- Tests if the given deck has the same length before and after the shuffle
 prop_size_shuffle :: Rand -> Deck -> Bool
 prop_size_shuffle (Rand randomlist) deck = 
     length (shuffle randomlist deck) == length deck
 
 --- TASK B6 ---
+-- RunGame implementation
 implementation = Interface
   {  iFullDeck  = fullDeck
   ,  iValue     = value
@@ -162,5 +169,6 @@ implementation = Interface
   ,  iShuffle   = shuffle
   }
 
+-- Main game
 main :: IO ()
 main = runGame implementation
